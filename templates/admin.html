@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>لوحة التحكم الإدارية</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #0f172a; color: white; margin: 0; padding: 20px; text-align: right; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #1e293b; }
+        th, td { padding: 12px; border: 1px solid #334155; text-align: center; }
+        th { background: #3b82f6; }
+        .stats { display: flex; gap: 20px; margin-bottom: 20px; }
+        .stat-box { background: #1e293b; padding: 20px; border-radius: 8px; flex: 1; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>لوحة إدارة نظام التاكسي</h1>
+    <div class="stats">
+        <div class="stat-box">
+            <h3>إجمالي السائقين</h3>
+            <p id="total-drivers">0</p>
+        </div>
+        <div class="stat-box">
+            <h3>الرحلات المكتملة</h3>
+            <p id="completed-rides">0</p>
+        </div>
+    </div>
+
+    <h2>قائمة السائقين</h2>
+    <table>
+        <thead>
+            <tr><th>الاسم</th><th>الهاتف</th><th>المدينة</th><th>الحالة</th></tr>
+        </thead>
+        <tbody id="drivers-list"></tbody>
+    </table>
+
+    <script>
+        async function loadAdminData() {
+            const res = await fetch('/api/admin/stats');
+            const data = await res.json();
+
+            document.getElementById('total-drivers').innerText = data.stats.total_drivers;
+            document.getElementById('completed-rides').innerText = data.stats.completed_rides;
+
+            let driversHtml = '';
+            data.drivers.forEach(d => {
+                driversHtml += `<tr><td>${d.name}</td><td>${d.phone}</td><td>${d.city}</td><td>${d.status}</td></tr>`;
+            });
+            document.getElementById('drivers-list').innerHTML = driversHtml;
+        }
+        loadAdminData();
+    </script>
+</body>
+</html>
