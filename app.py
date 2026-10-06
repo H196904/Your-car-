@@ -1,6 +1,6 @@
 from datetime import datetime
 import os
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 
@@ -43,15 +43,118 @@ with app.app_context():
     db.session.commit()
 
 
-# --- مسارات عرض صفحات HTML ---
+# --- واجهة المستخدم الرئيسية (بدون الحاجة لمجلد templates) ---
 @app.route('/')
 def home():
-  return render_template('index.html')
+  return """
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+        <meta charset="UTF-8">
+        <title>تطبيق التاسي - السودان</title>
+        <style>
+            body { font-family: Tahoma, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; text-align: right; }
+            .card { background: white; padding: 20px; border-radius: 8px; max-width: 400px; margin: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            input, select, button { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+            button { background: #10b981; color: white; border: none; font-weight: bold; cursor: pointer; }
+            button:hover { background: #059669; }
+            .hidden { display: none; }
+        </style>
+    </head>
+    <body>
+        <div id="login-screen" class="card">
+            <h2>تسجيل الدخول / إنشاء حساب</h2>
+            <input type="text" id="phone" placeholder="رقم الهاتف (مثال: 0912345678)">
+            <input type="text" id="name" placeholder="الاسم الكامل">
+            <select id="role">
+                <option value="rider">راكب</option>
+                <option value="driver">سائق</option>
+            </select>
+            <button onclick="login()">دخول</button>
+        </div>
 
+        <div id="app-screen" class="card hidden">
+            <h2 id="welcome-msg">مرحباً</h2>
+            <div id="rider-section" class="hidden">
+                <h3>طلب رحلة جديدة</h3>
+                <input type="text" id="pickup" placeholder="مكان الانطلاق (مثال: الخرطوم 2)">
+                <input type="text" id="dropoff" placeholder="الوجهة (مثال: أمدرمان)">
+                <select id="car_type">
+                    <option value="Economy">اقتصادي (أمجاد)</option>
+                    <option value="VIP">تاسي فاخر</option>
+                </select>
+                <button onclick="requestRide()">اطلب الآن</button>
+            </div>
+            <div id="driver-section" class="hidden">
+                <h3>لوحة السائق</h3>
+                <p>حالة الاتصال: <span style="color:green;">متصل</span></p>
+                <div id="available-rides">لا توجد رحلات متاحة حالياً</div>
+            </div>
+            <button onclick="logout()" style="background:#ef4444; margin-top:20px;">تسجيل خروج</button>
+        </div>
 
-@app.route('/admin')
-def admin_page():
-  return render_template('admin.html')
+        <script>
+            async function login() {
+                const phone = document.getElementById('phone').value;
+                const name = document.getElementById('name').value;
+                const role = document.getElementById('role').value;
+                if(!phone) { alert('الرجاء إدخال رقم الهاتف'); return; }
+
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({phone, name, role})
+                });
+                const data = await res.json();
+                if(data.success) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    loadUI(data.user);
+                } else {
+                    alert(data.message);
+                }
+            }
+
+            function loadUI(user) {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('app-screen').classList.remove('hidden');
+                document.getElementById('welcome-msg').innerText = `مرحباً، ${user.name} (${user.role === 'rider' ? 'راكب' : 'سائق'})`;
+                if(user.role === 'rider') {
+                    document.getElementById('rider-section').classList.remove('hidden');
+                } else {
+                    document.getElementById('driver-section').classList.remove('hidden');
+                }
+            }
+
+            async function requestRide() {
+                const user = JSON.parse(localStorage.getItem('user'));
+                const pickup = document.getElementById('pickup').value;
+                const dropoff = document.getElementById('dropoff').value;
+                const car_type = document.getElementById('car_type').value;
+
+                const res = await fetch('/api/rides', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({rider_phone: user.phone, pickup, dropoff, car_type})
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert('تم إرسال طلب الرحلة بنجاح! برقم: ' + data.ride_id);
+                }
+            }
+
+            function logout() {
+                localStorage.removeItem('user');
+                location.reload();
+            }
+
+            window.onload = function() {
+                const user = localStorage.getItem('user');
+                if(user) loadUI(JSON.parse(user));
+            }
+        </script>
+    </body>
+    </html>
+    """
 
 
 # --- مسارات API ---
