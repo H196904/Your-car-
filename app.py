@@ -1,5 +1,5 @@
 from datetime import datetime
-import os  # <-- هذا هو السطر الذي كان ناقصاً
+import os
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -16,10 +16,8 @@ class User(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   phone = db.Column(db.String(20), unique=True, nullable=False)
   name = db.Column(db.String(100), nullable=False)
-  role = db.Column(
-      db.String(20), nullable=False
-  )  # 'rider', 'driver', 'admin'
-  status = db.Column(db.String(20), default='active')  # 'active', 'inactive'
+  role = db.Column(db.String(20), nullable=False)
+  status = db.Column(db.String(20), default='active')
   city = db.Column(db.String(50), default='الخرطوم')
 
 
@@ -31,21 +29,29 @@ class Ride(db.Model):
   dropoff = db.Column(db.String(200), nullable=False)
   car_type = db.Column(db.String(50), nullable=False)
   fare = db.Column(db.Float, default=2500.0)
-  status = db.Column(
-      db.String(30), default='Search'
-  )  # 'Search', 'Accepted', 'Completed', 'Cancelled'
+  status = db.Column(db.String(30), default='Search')
   created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 with app.app_context():
   db.create_all()
-  # إنشاء مدير افتراضي إذا لم يكن موجوداً
   if not User.query.filter_by(phone='0912345678').first():
     admin = User(
         phone='0912345678', name='المدير العام', role='admin', city='الخرطوم'
     )
     db.session.add(admin)
     db.session.commit()
+
+
+# --- مسارات عرض صفحات HTML ---
+@app.route('/')
+def home():
+  return render_template('index.html')
+
+
+@app.route('/admin')
+def admin_page():
+  return render_template('admin.html')
 
 
 # --- مسارات API ---
